@@ -179,7 +179,15 @@ def main():
         if st.button("Redact Document"):
             # Convert file to base64
             data_b64 = base64.b64encode(file.getvalue()).decode()
-            payload = {"file": {"data": data_b64, "content_type": "application/pdf"}}
+            # Payload with Sensible green color for masking
+            payload = {
+                "file": {"data": data_b64, "content_type": "application/pdf"},
+                "entity_detection": {"accuracy": "high"},
+                "return_format": "pdf",
+                "pdf_options": {
+                    "redaction_color": SENSIBLE_GREEN.lstrip('#')  # Remove # from hex color
+                }
+            }
             
             with st.spinner("Masking in progress..."):
                 r = requests.post(f"{API_URL}/process/files/base64", json=payload, headers=HEADERS, timeout=120)
