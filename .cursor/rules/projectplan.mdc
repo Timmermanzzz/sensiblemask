@@ -1,0 +1,251 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+. Overzicht in één oogopslag
+
+Clone het project of maak het aan met de Cursor Project Rules.
+
+Installeer dependencies (pip install -r requirements.txt).
+
+Voeg je Community API‑key toe (env‑var of .env).
+
+Run streamlit run streamlit_app.py.
+
+Upload een PDF < 10 MB → zie gemaskeerd resultaat en download.
+
+✔️ Klaar! De rest van deze gids geeft alle achter­grond, tips en probleem­oplossing.
+
+2. Vereisten
+
+Stap
+
+Software
+
+Versie‑indicatie
+
+Install‑hint
+
+1
+
+Python
+
+3.10 – 3.12
+
+pyenv install 3.12
+
+2
+
+pip / venv
+
+recent
+
+python -m venv venv && source venv/bin/activate
+
+3
+
+Git
+
+any
+
+brew install git
+
+4
+
+(Opt.) Docker
+
+24+
+
+voor on‑prem variant
+
+3. API‑sleutel & limieten
+
+Eigenschap
+
+Community key
+
+Calls per minuut
+
+10
+
+Calls per dag
+
+75
+
+Max. PDF‑grootte
+
+10 MB
+
+# Zet je sleutel als env‑var
+export PRIVATEAI_KEY="pk_live_…"
+# (optioneel) eigen endpoint – standaard is community
+export PRIVATEAI_URL="https://api.private-ai.com/community/v4"
+
+❗ Streamlit blokkeert uploads > 200 MB, maar de API‐limiet is 10 MB. De app valideert dit vooraf zodat je geen call verspilt.
+
+4. Projectstructuur (gegenereerd door Cursor)
+
+privateai-redact-demo/
+├─ streamlit_app.py        # hoofd‑UI + API‑call
+├─ requirements.txt        # packages
+├─ .env.example            # voorbeeld env
+├─ tests/
+│  └─ test_smoke.py        # minimale import‑test
+├─ scripts/                # hulpscripts
+│  ├─ run.sh               # .env inladen + run
+│  ├─ lint.sh              # Ruff check
+│  └─ format.sh            # Ruff format
+├─ .github/workflows/ci.yml# CI‑pipeline
+└─ README.md               # beknopte uitleg
+
+5. Stap‑voor‑stap installatie
+
+Repository aanmaken
+
+# optie A – via Cursor Rules (aanbevolen)
+# 1) Open Cursor → Create Project from Rules → plak JSON
+
+# optie B – clone kant‑en‑klaar repo
+git clone https://github.com/your‑org/privateai-redact-demo.git
+cd privateai-redact-demo
+
+Virtuele omgeving
+
+python -m venv venv
+source venv/bin/activate
+
+Dependencies
+
+pip install -r requirements.txt
+
+API‑sleutel instellen
+
+cp .env.example .env        # vul sleutel in of gebruik export
+# of
+export PRIVATEAI_KEY="pk_live_…"
+
+Ontwikkelserver starten
+
+streamlit run streamlit_app.py
+# of via Cursor‑task (⌘⇧P → Tasks: Run Task → Dev server)
+
+PDF uploaden
+
+Ga naar localhost:8501.
+
+Kies een PDF ≤ 10 MB.
+
+Klik Redacteer en wacht ~1‑6 sec.
+
+Download of bekijk inline.
+
+6. Belangrijkste code‑fragmenten uitgelegd
+
+# 🎯 streamlit_app.py – upload handler
+import base64, os, requests, streamlit as st
+
+API_URL = os.getenv("PRIVATEAI_URL", "https://api.private-ai.com/community/v4")
+API_KEY = os.getenv("PRIVATEAI_KEY")
+HEADERS  = {"x-api-key": API_KEY}
+
+file = st.file_uploader("Upload een PDF", type=["pdf"])
+if file:
+    if file.size > 10 * 1024 * 1024:
+        st.error("Bestand > 10 MB – verklein of kies een ander document.")
+        st.stop()
+
+    data_b64 = base64.b64encode(file.getvalue()).decode()
+    payload  = {"file": {"data": data_b64, "content_type": "application/pdf"}}
+
+    with st.spinner("Bezig met lakken …"):
+        r = requests.post(f"{API_URL}/process/files/base64", json=payload, headers=HEADERS, timeout=120)
+
+    if r.ok:
+        red_b64 = r.json()["processed_file"]
+        red_pdf = base64.b64decode(red_b64)
+        st.download_button("Download gelakte PDF", red_pdf, file_name=f"redacted_{file.name}")
+        st.pdf(red_pdf)  # preview
+    else:
+        st.error(f"API‑fout: {r.status_code} – {r.text}")
+
+Wat gebeurt er?
+
+Het bestand wordt base64‑geëncodeerd (community‑eis).
+
+/process/files/base64 retourneert ook base64.
+
+Streamlit decodeert en biedt als download‑knop + inline PDF‑viewer.
+
+7. Lint, format & tests
+
+# statisch analyseren
+make lint   # alias: ruff check .
+# automatische format
+make format # alias: ruff format .
+# tests draaien
+make test   # alias: pytest -q
+
+✅ Pro‑tip: voeg pre‑commit hooks toe om ruff automatisch te draaien bij elke commit.
+
+8. CI / CD
+
+GitHub Action ci.yml draait bij elke push of pull request:
+
+Check‑out repo
+
+Set‑up Python 3.11
+
+Install dependencies
+
+Ruff lint
+
+Pytest
+
+Je kunt eenvoudig een stap toevoegen om beelden naar Docker Hub te pushen of een Streamlit Cloud deploy te triggeren.
+
+9. Veelvoorkomende fouten & oplossingen
+
+Symptoom
+
+Mogelijke oorzaak
+
+Fix
+
+429 Too Many Requests
+
+> 10 requests/min of > 75 per dag
+
+Wacht 60 sec of gebruik 2e sleutel
+
+400 File too large
+
+PDF > 10 MB
+
+comprimeer (bv. gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook …)
+
+connect timeout
+
+Langzame upload > 120 sec
+
+vergroot timeout of gebruik sneller internet
+
+Streamlit white‑page
+
+Env‑var niet gezet
+
+check .env of echo $PRIVATEAI_KEY
+
+10. Volgende stappen
+
+DOCX‑support: vervang type=["pdf"] door type=["pdf", "docx"] en stuur naar hetzelfde endpoint.
+
+On‑prem Private‑AI: vervang PRIVATEAI_URL door je interne host en laat base64‑upload weg (gebruik /process/files/uri).
+
+Rate‑limit throttle: queue requests client‑side of gebruik Redis RQ voor server‑side batching.
+
+Docker Compose: draai Streamlit + nginx + (optioneel) Private‑AI container achter één reverse proxy.
+
+Security: serve PDF’s via tijdelijke S3 presigned URL’s i.p.v. direct in mem.
+
+

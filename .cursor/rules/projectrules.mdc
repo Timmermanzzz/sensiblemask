@@ -1,0 +1,203 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+{
+  "$schema": "https://raw.githubusercontent.com/cursorinsight/project-rules-schema/main/schema.json",
+
+  // ───────────────────────────────
+  // 1. Project‑metadata
+  // ───────────────────────────────
+  "name": "privateai-redact-demo",
+  "description": "Streamlit‑demo die PDF‑bestanden maskeert met Private‑AI (community key).",
+  "language": "python",
+  "version": "1.0.0",
+
+  // ───────────────────────────────
+  // 2. Bestands‑ & map‑structuur
+  // ───────────────────────────────
+  "structure": {
+    "/": [
+      "streamlit_app.py",
+      "requirements.txt",
+      ".env.example",
+      "README.md",
+      "Makefile"
+    ],
+    "tests": [
+      "test_smoke.py"
+    ],
+    ".github/workflows": [
+      "ci.yml"
+    ],
+    "scripts": [
+      "run.sh",
+      "lint.sh",
+      "format.sh"
+    ]
+  },
+
+  // ───────────────────────────────
+  // 3. Bestanden (inline‑inhoud)
+  // ───────────────────────────────
+  "files": {
+    "streamlit_app.py": {
+      "type": "code",
+      "contentFromCanvas": "6819a63988048191b9dbace48abc74d4"   // gebruikt bestaande canvas‑file
+    },
+
+    "requirements.txt": {
+      "type": "text",
+      "content": [
+        "streamlit>=1.35.0",
+        "requests>=2.32.0",
+        "python-dotenv>=1.0.1",
+        "ruff>=0.4.3",
+        "pytest>=8.1.1"
+      ]
+    },
+
+    ".env.example": {
+      "type": "text",
+      "content": [
+        "# Vul je community key in of exporteer deze als env‑var:",
+        "PRIVATEAI_KEY=pk_live_xxx",
+        "",
+        "# Optioneel ander endpoint (default = community):",
+        "# PRIVATEAI_URL=https://api.private-ai.com/community/v4"
+      ]
+    },
+
+    "README.md": {
+      "type": "text",
+      "content": [
+        "# Private‑AI redact demo",
+        "",
+        "Upload een PDF ➜ krijg gemaskeerde PDF terug.",
+        "",
+        "```bash",
+        "pip install -r requirements.txt",
+        "export PRIVATEAI_KEY=\"pk_live_xxx\"",
+        "streamlit run streamlit_app.py",
+        "```"
+      ]
+    },
+
+    "Makefile": {
+      "type": "text",
+      "content": [
+        ".PHONY: dev lint format test",
+        "",
+        "dev:",
+        "\tstreamlit run streamlit_app.py",
+        "",
+        "lint:",
+        "\truff check .",
+        "",
+        "format:",
+        "\truff format .",
+        "",
+        "test:",
+        "\tpytest -q"
+      ]
+    },
+
+    "tests/test_smoke.py": {
+      "type": "code",
+      "content": [
+        "def test_import():",
+        "    import streamlit_app  # noqa: F401",
+        ""
+      ]
+    },
+
+    ".github/workflows/ci.yml": {
+      "type": "text",
+      "content": [
+        "name: CI",
+        "on: [push, pull_request]",
+        "jobs:",
+        "  build:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - uses: actions/checkout@v4",
+        "      - uses: actions/setup-python@v5",
+        "        with:",
+        "          python-version: '3.11'",
+        "      - run: pip install -r requirements.txt",
+        "      - run: ruff check .",
+        "      - run: pytest -q"
+      ]
+    },
+
+    "scripts/run.sh": {
+      "type": "text",
+      "executable": true,
+      "content": [
+        "#!/usr/bin/env bash",
+        "export $(grep -v '^#' .env | xargs) 2>/dev/null || true",
+        "streamlit run streamlit_app.py"
+      ]
+    },
+
+    "scripts/lint.sh": {
+      "type": "text",
+      "executable": true,
+      "content": [
+        "#!/usr/bin/env bash",
+        "ruff check ."
+      ]
+    },
+
+    "scripts/format.sh": {
+      "type": "text",
+      "executable": true,
+      "content": [
+        "#!/usr/bin/env bash",
+        "ruff format ."
+      ]
+    }
+  },
+
+  // ───────────────────────────────
+  // 4. Cursor‑tasks (⇧⌘P ▶ Run Task)
+  // ───────────────────────────────
+  "tasks": [
+    {
+      "label": "Dev server",
+      "command": "streamlit",
+      "args": ["run", "streamlit_app.py"],
+      "env": {
+        "PRIVATEAI_KEY": "${env:57271f9a4cdf47ada3b3848942be0fd9}",
+        "PRIVATEAI_URL": "${env:https://api.private-ai.com/community}"
+      },
+      "isBackground": true,
+      "problemMatcher": "$streamlit-watch"
+    },
+    {
+      "label": "Lint",
+      "command": "ruff",
+      "args": ["check", "."]
+    },
+    {
+      "label": "Format",
+      "command": "ruff",
+      "args": ["format", "."]
+    },
+    {
+      "label": "Test",
+      "command": "pytest",
+      "args": ["-q"]
+    }
+  ],
+
+  // ───────────────────────────────
+  // 5. VS Code / Cursor extensies
+  // ───────────────────────────────
+  "extensions": [
+    "ms-python.python",
+    "charliermarsh.ruff"
+  ]
+}
+
